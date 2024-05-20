@@ -1,0 +1,75 @@
+from pytube import YouTube
+import moviepy.editor as mp
+import speech_recognition as sr
+import os
+import uuid
+
+# Kullanıcıdan YouTube linkini al
+youtube_link = input("YouTube video linkini girin: ")
+
+# YouTube videosunu indir
+yt = YouTube(youtube_link)
+video = yt.streams.filter(only_audio=True).first()
+output_file = video.download(output_path=".")
+
+# İndirilen dosyayı mp3'e dönüştürmek için benzersiz bir isim oluştur
+base, ext = os.path.splitext(output_file)
+unique_id = str(uuid.uuid4())
+new_file = base + '_' + unique_id + '.mp3'
+os.rename(output_file, new_file)
+
+# moviepy ile sesi yükle
+audio_clip = mp.AudioFileClip(new_file)
+
+# Ses kliplerini 30 saniyelik parçalara böl
+audio_length = int(audio_clip.duration)
+recognizer = sr.Recognizer()
+transcript = ""
+
+for i in range(0, audio_length, 30):
+    start = i
+    end = min(i + 30, audio_length)
+    clip = audio_clip.subclip(start, end)
+    clip.write_audiofile(f"temp_{unique_id}.wav")
+    
+    # speech_recognition kullanarak sesi metne dönüştür
+    with sr.AudioFile(f"temp_{unique_id}.wav") as source:
+        audio = recognizer.record(source)
+    
+    try:
+        # Google Speech Recognition API kullanarak sesi metne dönüştür
+        text = recognizer.recognize_google(audio, language="tr-TR")
+        transcript += text + " "
+    except sr.RequestError as e:
+        print(f"API isteğinde hata oluştu: {e}")
+    except sr.UnknownValueError:
+        print("Ses tanımlanamadı")
+
+    # Geçici dosyayı sil
+    os.remove(f"temp_{unique_id}.wav")
+
+# Metni boşluklara göre ayır ve her 7 boşluktan sonra alt satıra geç
+if transcript:
+    words = transcript.split(' ')
+    formatted_text = ''
+    for i in range(0, len(words), 7):
+        formatted_text += ' '.join(words[i:i+7]).strip() + '\n'
+
+    # Metni dosyaya kaydet
+    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "videos")
+    if not os.path.exists(desktop_path):
+        os.makedirs(desktop_path)
+
+    text_file_path = os.path.join(desktop_path, "video_text_" + unique_id + ".txt")
+    with open(text_file_path, "w", encoding="utf-8") as file:
+        file.write(formatted_text)
+
+    print(f"Metin dosyası '{text_file_path}' konumuna kaydedildi.")
+else:
+    print("Metin dosyası oluşturulamadı.")
+
+# Son dosyayı sil
+os.remove(new_file)
+ve(new_file)
+
+#https://youtube.com/shorts/bc5Js3_b6mM?si=200b_VTE3M3iyDXS
