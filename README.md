@@ -1,0 +1,1 @@
+Hello, in this code written in Python, the video is split into 30-second segments, then converted first to audio and subsequently to a text file. While writing the code, it saves this text file in the 'videos' folder on your desktop. It is recommended to make adjustments accordingly
